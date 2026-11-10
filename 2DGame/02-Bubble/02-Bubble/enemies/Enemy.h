@@ -1,0 +1,58 @@
+#ifndef _ENEMY_INCLUDE
+#define _ENEMY_INCLUDE
+
+
+#include "../Sprite.h"
+#include "../TileMap.h"
+
+
+// Abstract base for every enemy. It owns the sprite, the tile map reference
+// and the position; each subclass decides how it moves and what it can do.
+
+class Enemy
+{
+public:
+	Enemy();
+	virtual ~Enemy();
+
+public:
+	virtual void init(const glm::ivec2 &tileMapPos, ShaderProgram &shaderProgram) = 0;
+	virtual void update(int deltaTime) = 0;
+	virtual void render();
+	virtual bool isFlying() const { return false; }
+
+	void setTileMap(TileMap *tileMap);
+	void setPosition(const glm::vec2 &pos);
+	glm::vec2 getPosition() const { return glm::vec2(tileMapDispl.x + posEnemy.x, tileMapDispl.y + posEnemy.y); }
+	glm::ivec2 getSize() const { return sizeEnemy; }
+
+	// Damage from explosions. After a hit the enemy ignores further hits for a
+	// moment, so one explosion only takes one life from enemies with several.
+	virtual void takeHit();
+	void updateHitCooldown(int deltaTime);
+	virtual void kill() { lives = 0; }
+	bool isDead() const { return lives <= 0; }
+	virtual bool isReadyToRemove() const { return isDead(); }
+
+	// Enemies that fire return true once per shot, with the projectile's
+	// starting centre and velocity. Scene creates the projectile.
+	virtual bool takeShot(glm::vec2 &origin, glm::vec2 &velocity) { return false; }
+	// How many times this enemy's projectiles ricochet off walls.
+	virtual int shotBounces() const { return 0; }
+
+protected:
+	void updateSpritePosition();
+
+protected:
+	glm::ivec2 tileMapDispl, posEnemy, sizeEnemy;
+	Texture spritesheet;
+	Sprite *sprite;
+	TileMap *map;
+	int lives;
+	int hitCooldown;
+	float horizontalRemainder;
+
+};
+
+
+#endif // _ENEMY_INCLUDE

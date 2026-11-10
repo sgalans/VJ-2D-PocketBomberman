@@ -20,18 +20,32 @@ Sprite::Sprite(const glm::vec2 &quadSize, const glm::vec2 &sizeInSpritesheet, Te
 												0.f, 0.f, 0.f, 0.f, 
 												quadSize.x, quadSize.y, sizeInSpritesheet.x, sizeInSpritesheet.y, 
 												0.f, quadSize.y, 0.f, sizeInSpritesheet.y};
+	float boundedVertices[48];
+	for(int i = 0; i < 6; i++)
+	{
+		for(int j = 0; j < 4; j++)
+			boundedVertices[i * 8 + j] = vertices[i * 4 + j];
+		boundedVertices[i * 8 + 4] = boundedVertices[i * 8 + 5] = 0.f;
+		boundedVertices[i * 8 + 6] = sizeInSpritesheet.x;
+		boundedVertices[i * 8 + 7] = sizeInSpritesheet.y;
+	}
 
 	glGenVertexArrays(1, &vao);
 	glBindVertexArray(vao);
 	glGenBuffers(1, &vbo);
 	glBindBuffer(GL_ARRAY_BUFFER, vbo);
-	glBufferData(GL_ARRAY_BUFFER, 24 * sizeof(float), vertices, GL_STATIC_DRAW);
-	posLocation = program->bindVertexAttribute("position", 2, 4*sizeof(float), 0);
-	texCoordLocation = program->bindVertexAttribute("texCoord", 2, 4*sizeof(float), (void *)(2*sizeof(float)));
+	glBufferData(GL_ARRAY_BUFFER, sizeof(boundedVertices), boundedVertices, GL_STATIC_DRAW);
+	posLocation = program->bindVertexAttribute("position", 2, 8*sizeof(float), 0);
+	texCoordLocation = program->bindVertexAttribute("texCoord", 2, 8*sizeof(float), (void *)(2*sizeof(float)));
+	texBoundsLocation = program->bindVertexAttribute("texBounds", 4, 8*sizeof(float), (void *)(4*sizeof(float)));
 	texture = spritesheet;
 	shaderProgram = program;
 	currentAnimation = -1;
 	position = glm::vec2(0.f);
+	size = quadSize;
+	flipX = false;
+	scale = 1.f;
+	rotation = 0.f;
 }
 
 Sprite::~Sprite()
@@ -57,6 +71,19 @@ void Sprite::update(int deltaTime)
 void Sprite::render() const
 {
 	glm::mat4 modelview = glm::translate(glm::mat4(1.0f), glm::vec3(position.x, position.y, 0.f));
+	if(scale != 1.f || rotation != 0.f)
+	{
+		modelview = glm::translate(modelview, glm::vec3(size / 2.f, 0.f));
+		modelview = glm::rotate(modelview, rotation, glm::vec3(0.f, 0.f, 1.f));
+		modelview = glm::scale(modelview, glm::vec3(scale, scale, 1.f));
+		modelview = glm::translate(modelview, glm::vec3(-size / 2.f, 0.f));
+	}
+	if(flipX)
+	{
+		// Mirror around the quad's vertical centre so it stays in the same spot.
+		modelview = glm::translate(modelview, glm::vec3(size.x, 0.f, 0.f));
+		modelview = glm::scale(modelview, glm::vec3(-1.f, 1.f, 1.f));
+	}
 	shaderProgram->setUniformMatrix4f("modelview", modelview);
 	shaderProgram->setUniform2f("texCoordDispl", texCoordDispl.x, texCoordDispl.y);
 	glEnable(GL_TEXTURE_2D);
@@ -64,6 +91,7 @@ void Sprite::render() const
 	glBindVertexArray(vao);
 	glEnableVertexAttribArray(posLocation);
 	glEnableVertexAttribArray(texCoordLocation);
+	glEnableVertexAttribArray(texBoundsLocation);
 	glDrawArrays(GL_TRIANGLES, 0, 6);
 	glDisable(GL_TEXTURE_2D);
 }
@@ -110,6 +138,11 @@ int Sprite::animation() const
 void Sprite::setPosition(const glm::vec2 &pos)
 {
 	position = pos;
+}
+
+void Sprite::setFlipX(bool flip)
+{
+	flipX = flip;
 }
 
 

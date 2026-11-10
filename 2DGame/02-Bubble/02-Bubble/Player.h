@@ -4,6 +4,7 @@
 
 #include "Sprite.h"
 #include "TileMap.h"
+#include "Item.h"
 
 
 // Player is basically a Sprite that represents the player. As such it has
@@ -13,6 +14,19 @@
 class Player
 {
 public:
+	struct ItemCounts
+	{
+		int bombs, fire, speed;
+	};
+
+	struct PowerUps
+	{
+		int nBombs, firePower;
+		float moveSpeed;
+		int vestTime; // Remaining milliseconds, not a permanent upgrade
+		int getSpeedUpLevel() const;
+	};
+
 	Player();
 	~Player();
 
@@ -20,25 +34,75 @@ public:
 	void init(const glm::ivec2 &tileMapPos, ShaderProgram &shaderProgram);
 	void update(int deltaTime);
 	void render();
+	void enterExit(const glm::vec2 &doorPosition);
+	bool isExiting() const { return exiting; }
+	bool hasEnteredExit() const;
+	bool isStandingOnSurface(int top) const { return isAlive() && verticalVelocity >= 0.f && posPlayer.y + sizePlayer.y == top; }
+	void liftByTrampoline(int top, bool launch);
 	
 	void setTileMap(TileMap *tileMap);
+	// Position uses the sprite's top-left; getPosition returns the hitbox's top-left.
 	void setPosition(const glm::vec2 &pos);
+	// Moves the player there and remembers it as the respawn point after losing a life.
+	void setSpawnPoint(const glm::vec2 &pos);
 	glm::vec2 getPosition() const { return glm::vec2(tileMapDispl.x + posPlayer.x, tileMapDispl.y + posPlayer.y); }
 	glm::ivec2 getSize() const { return sizePlayer; }
 
 	void loseLife();
+	// Takes every life at once, ignoring invulnerability and god mode (used when time runs out)
+	void loseAllLives();
 	int getLives() const { return lives; }
-	bool isAlive() const { return lives > 0; }
+	void setLives(int remaining) { lives = glm::clamp(remaining, 0, maxLives); }
+	int getMaxLives() const { return maxLives; }
+	int getNBombs() const { return nBombs; }
+	int getFirePower() const { return firePower; }
+	int getSpeedUpLevel() const;
+	int getVestTime() const { return vestTime; }
+	// Active gameplay excludes both death and exit animations.
+	bool isAlive() const { return lives > 0 && !isDying() && !exiting; }
+	bool isDying() const { return deathTime > 0; }
+	bool isGameOver() const { return lives <= 0 && !isDying(); }
+	bool isInvulnerable() const { return exiting || isDying() || invulnTime > 0 || vestTime > 0 || invensible; }
+	static bool isBlinkVisible(int elapsedTime);
+	bool takeBombRequest();
+	void applyItem(Item::ItemType type);
+	// Debug cheat: max bombs, fire and speed, plus a fresh vest
+	void giveAllPowerUps();
+	ItemCounts getCollectedItems() const { return collectedItems; }
+	static PowerUps powerUpsFromItems(const ItemCounts &items);
+	PowerUps getPowerUps() const;
+	void setPowerUps(const PowerUps &powerUps);
 
 private:
-	bool bJumping;
+	void updateSpritePosition();
+	void startDeath();
+
+private:
+	bool facingRight;
 	bool bJumpKeyPressed;
+	bool bGodKeyPressed;
+	bool bBombKeyPressed;
+	bool bBombRequested;
 	glm::ivec2 tileMapDispl, posPlayer, sizePlayer;
-	int jumpAngle, startY;
-	int lives;
+	glm::vec2 spawnPoint; // sprite top-left, same convention as setPosition
+	float verticalPosition, verticalVelocity, horizontalRemainder;
+	int moveDirection;
+	bool shortJumpActive;
+	int lives, maxLives;
+	int invulnTime;
+	int deathTime, blinkTime;
+	bool exiting;
+	int exitTime;
+	glm::vec2 exitStart, exitTarget;
+	int nBombs;
+	int firePower; // flame length in tiles
+	float moveSpeed; // pixels per frame
+	int vestTime;
+	ItemCounts collectedItems; // Pickups in this attempt, including those above the stat caps
 	Texture spritesheet;
-	Sprite *sprite;
+	Sprite *sprite, *deathSprite;
 	TileMap *map;
+	bool invensible;
 
 };
 

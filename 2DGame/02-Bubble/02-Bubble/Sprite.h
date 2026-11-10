@@ -9,8 +9,7 @@
 #include "AnimKeyframes.h"
 
 
-// This class is derived from code seen earlier in TexturedQuad but it is also
-// able to manage animations stored as a spritesheet. 
+// Textured quad with spritesheet animation, horizontal flipping and scaling.
 
 
 class Sprite
@@ -35,14 +34,21 @@ public:
 	int animation() const;
 	
 	void setPosition(const glm::vec2 &pos);
+	// Mirrors the quad horizontally in place, so one set of frames can face both ways.
+	void setFlipX(bool flip);
+	void setScale(float value) { scale = value; }
+	void setRotation(float radians) { rotation = radians; }
 
 private:
 	Texture *texture;
 	ShaderProgram *shaderProgram;
 	GLuint vao;
 	GLuint vbo;
-	GLint posLocation, texCoordLocation;
-	glm::vec2 position;
+	GLint posLocation, texCoordLocation, texBoundsLocation;
+	glm::vec2 position, size;
+	bool flipX;
+	float scale;
+	float rotation;
 	int currentAnimation, currentKeyframe;
 	float timeAnimation;
 	glm::vec2 texCoordDispl;
