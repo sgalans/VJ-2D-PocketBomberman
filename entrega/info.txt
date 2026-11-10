@@ -160,4 +160,5 @@ HUD i so
  - El temps es mostra en vermell i parpelleja durant els últims 30 segons.
  - Musica de fons, i punts claus del joc.
  - Efectes de so de navegació dels menús, col·locació i explosió de bombes,
-   recollida d'objectes, salt, mort de enemic i dany al jugador.
+   recollida d'objectes, salt, mort de enemic
+
